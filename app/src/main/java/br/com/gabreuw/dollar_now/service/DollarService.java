@@ -4,8 +4,15 @@ import android.annotation.SuppressLint;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.jsoup.select.Evaluator;
 
+import java.io.IOException;
+import java.time.LocalDate;
+import java.util.Optional;
+
+import br.com.gabreuw.dollar_now.models.Dollar;
 import br.com.gabreuw.dollar_now.service.callback.CurrentDollarQuotationCallback;
 import br.com.gabreuw.dollar_now.utils.NumberHelper;
 import retrofit2.Call;
@@ -16,54 +23,46 @@ import retrofit2.converter.scalars.ScalarsConverterFactory;
 
 public class DollarService {
 
-    private final GoogleFinanceService api;
-
-    public DollarService() {
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("https://www.google.com/finance/")
-                .addConverterFactory(ScalarsConverterFactory.create())
-                .build();
-
-        api = retrofit.create(GoogleFinanceService.class);
-    }
-
     @SuppressLint("NewApi")
     public void getCurrentDollarQuotation(CurrentDollarQuotationCallback callback) {
-        Call<String> call = api.getCurrentDollarQuotation();
+        Thread thread = new Thread(() -> {
+            try {
+                Document document = Jsoup.connect("https://br.investing.com/currencies/usd-brl").get();
 
-        call.enqueue(new Callback<String>() {
-            @Override
-            public void onResponse(Call<String> call, Response<String> response) {
-                if (response.isSuccessful()) {
-                    String html = response.body();
+                Element quotationElement = document
+                        .selectXpath("//*[@id=\"__next\"]/div[2]/div/div/div[2]/main/div/div[1]/div[2]/div[1]/span")
+                        .first();
 
-                    if (html == null) {
-                        call.cancel();
-                        return;
-                    }
+                Element variationElement = document
+                        .selectXpath("//*[@id=\"__next\"]/div[2]/div/div/div[2]/main/div/div[1]/div[2]/div[1]/div[2]/span[2]")
+                        .first();
 
-                    Document document = Jsoup.parse(html);
-                    Elements quotationElements = document.getElementsByClass("YMlKec fxKbKc");
-                    Elements variationElements = document.getElementsByClass("JwB6zf");
-
-                    if (quotationElements.isEmpty() | variationElements.isEmpty()) {
-                        call.cancel();
-                        return;
-                    }
-
-                    Float quotation = NumberHelper.parse(quotationElements.get(0).text());
-                    Float variation = NumberHelper.parse(
-                            variationElements.get(0).text().replace("%", "")
-                    );
-
-                    callback.onQuotationReceived(quotation, variation);
+                if (quotationElement == null | variationElement == null) {
+                    Thread.currentThread().interrupt();
+                    return;
                 }
-            }
 
-            @Override
-            public void onFailure(Call<String> call, Throwable t) {
-                callback.onFailure(t);
+                Float quotation = NumberHelper.parse(
+                        quotationElement
+                                .text()
+                                .replace(",", ".")
+                );
+                Float variation = NumberHelper.parse(
+                        variationElement
+                                .text()
+                                .replace(",", ".")
+                                .replace("%)", "")
+                                .replace("(", "")
+                );
+
+                callback.onQuotationReceived(quotation, variation);
+            } catch (IOException e) {
+                callback.onFailure(e);
+            } finally {
+                Thread.currentThread().interrupt();
             }
         });
+
+        thread.start();
     }
 }
