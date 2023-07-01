@@ -64,6 +64,7 @@ public class HomeActivity extends AppCompatActivity {
                         quotation,
                         variation
                 ));
+                loadDollarPriceFromDB();
             }
 
             @Override

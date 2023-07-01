@@ -5,21 +5,11 @@ import android.annotation.SuppressLint;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
-import org.jsoup.select.Evaluator;
 
 import java.io.IOException;
-import java.time.LocalDate;
-import java.util.Optional;
 
-import br.com.gabreuw.dollar_now.models.Dollar;
 import br.com.gabreuw.dollar_now.service.callback.CurrentDollarQuotationCallback;
 import br.com.gabreuw.dollar_now.utils.NumberHelper;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.scalars.ScalarsConverterFactory;
 
 public class DollarService {
 
